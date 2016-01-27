@@ -270,8 +270,7 @@ http.NotFound(res, req.Request)
 in addition to the `http.ResponseWriter` methods, the `gooh.Response` exposes a `WriteJson` method to make it easy for json APIs, you can use it as follows:
 ```golang
 router.GET("/hello", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res *gooh.Response, pms map[string]string) error {
-	res.WriteJson([]string{"Hello", "World!"})
-	return nil
+	return res.WriteJson([]string{"Hello", "World!"})
 })
 ```
 
