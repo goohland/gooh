@@ -114,7 +114,7 @@ router.GET("/hello", gooh.Version{1,0,0}, RouteHandler)
 and it exposes an `ApiVersion` property on the `gooh.Request` for you to set it to the correct version **before** getting to the router middleware
 ```golang
 app.AddMiddlewareHandler(func(app *gooh.App, req *gooh.Request, res *gooh.Response) error {
-	req.ApiVersion := &gooh.Version{1,0,0}
+	req.ApiVersion = &gooh.Version{1,0,0}
 	return nil
 })
 ...
@@ -150,7 +150,8 @@ The code above will match the given route handler against routes like [http://lo
 
 ### Rules
 *gooh* router enforces three rules and the router will panic if you try to break them
-1. Only one route handler is allowed per route
+
+Only one route handler is allowed per route
 ```golang
 router.GET("/hello", gooh.Version{}, HelloHandler)
 router.GET("/hello", gooh.Version{}, WorldHandler)
@@ -159,7 +160,7 @@ router.GET("/hello", gooh.Version{}, WorldHandler)
 panic: handler already exists for route: '/hello'
 ```
 
-2. All parameters under the same route must have a unique name
+All parameters under the same route must have a unique name
 ```golang
 router.GET("/users/:id/groups/:id", gooh.Version{}, RouteHandler)
 ```
@@ -167,7 +168,7 @@ router.GET("/users/:id/groups/:id", gooh.Version{}, RouteHandler)
 panic: overwriting parameter: 'id' for route: '/users/:id/groups/:id'
 ```
 
-3. If you provide a regular expression, it must be a valid one
+If you provide a regular expression, it must be a valid one
 ```golang
 router.GET("/users/:id{a)b}", gooh.Version{}, RouteHandler)
 ```
@@ -190,14 +191,14 @@ you can create your own implementations of the `Context` interface and use them 
 Any data you want to initialize once and share during the lifespan of the application can be set in the application context as follows:
 ```golang
 app := new(gooh.App)
-app.Context := new(MyContextImplementation)
-app.Context.Set("value", 768)
+app.Context = new(MyContextImplementation)
+app.Context.Set("value", "hello")
 ```
 and can be accessed from anywhere you have an instance of the `gooh.App` as follows:
 ```golang
-router.GET("/users", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res *gooh.Response, pms map[string]string) error {
+router.GET("/hello", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res *gooh.Response, pms map[string]string) error {
 	value, _ := app.Context.Get("value")
-	io.WriteString(res, value)
+	io.WriteString(res, value.(string))
 	return nil
 })
 ```
@@ -206,16 +207,16 @@ router.GET("/users", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res 
 Any data you want to initialize on every request and share during the lifespan of the request can be set in the request context as follows:
 ```golang
 app.AddMiddlewareHandler(func(app *gooh.App, req *gooh.Request, res *gooh.Response) error {
-	req.Context := new(MyContextImplementation)
-	req.Context.Set("value", "hello")
+	req.Context = new(MyContextImplementation)
+	req.Context.Set("value", "world")
 	return nil
 })
 ```
 and can be accessed from anywhere you have an instance of the `gooh.Request` as follows:
 ```golang
-router.GET("/users", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res *gooh.Response, pms map[string]string) error {
+router.GET("/hello", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res *gooh.Response, pms map[string]string) error {
 	value, _ := req.Context.Get("value")
-	io.WriteString(res, value)
+	io.WriteString(res, value.(string))
 	return nil
 })
 ```
@@ -224,9 +225,10 @@ router.GET("/users", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res 
 *gooh* offers a built-in `gooh.MemoryContext` which is nothing more than a `map[string]interface{}` implementing the `Context` interface, you can use it as follows:
 ```golang
 app := new(gooh.App)
-app.Context := new(gooh.MemoryContext)
+app.Context = new(gooh.MemoryContext)
 app.Context.Set("value", 768)
 val, _ := app.Context.Get("value")
+fmt.Println(val)
 ```
 
 ## Error Handling
@@ -253,7 +255,7 @@ app.AddErrorHanlder(func(app *gooh.App, req *gooh.Request, res *gooh.Response, e
 	case *gooh.PanicError:
 		http.Error(res, err.Error(), 500)
 		// or
-		panic(err.Err)
+		panic((err.(*gooh.PanicError)).Err)
 	default:
 		http.Error(res, err.Error(), 500)
 	}
