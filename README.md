@@ -82,7 +82,7 @@ the code above will output 'Hello World!' too when you hit [http://localhost:808
 
 
 ## Router
-*gooh* comes with a built-in router, the router defines a `RouteHandler` as a function with the following type declaration:
+*gooh* comes with a built-in router, the router defines a route handler as a function with the following type declaration:
 ```golang
 type RouteHandler func(*App, *Request, *Response, map[string]string) error
 ```
@@ -120,7 +120,7 @@ app.AddMiddlewareHandler(func(app *gooh.App, req *gooh.Request, res *gooh.Respon
 ...
 app.AddMiddlewareHandler(router.GetMiddlewareHandler())
 ```
-the router will then use this property to match against the registered route handlers, if a match is not found a `RouteNotFoundError` will be returned by the router middleware.
+the router will then use this property to match against the registered route handlers, if a match is not found a `gooh.RouteNotFoundError` will be returned by the router middleware.
 
 If you rather use url versioning simply specify your route path with the version and pass an empty `gooh.Version` to the router
 ```golang
@@ -177,7 +177,7 @@ panic: error parsing regexp: unexpected ): `a)b`
 ```
 
 ## Context
-*gooh* defines a `Context` interface as follows:
+*gooh* defines a context interface as follows:
 ```golang
 type Context interface {
 	Get(string) (interface{}, error)
@@ -185,7 +185,7 @@ type Context interface {
 	Exists(string) (bool, error)
 }
 ```
-you can create your own implementations of the `Context` interface and use them to share data at two levels
+you can create your own implementations of the `gooh.Context` interface and use them to share data at two levels
 
 ### Application Level Context
 Any data you want to initialize once and share during the lifespan of the application can be set in the application context as follows:
@@ -222,7 +222,7 @@ router.GET("/hello", gooh.Version{}, func(app *gooh.App, req *gooh.Request, res 
 ```
 
 ### Built-in Context
-*gooh* offers a built-in `gooh.MemoryContext` which is nothing more than a `map[string]interface{}` implementing the `Context` interface, you can use it as follows:
+*gooh* offers a built-in `gooh.MemoryContext` which is nothing more than a `map[string]interface{}` implementing the `gooh.Context` interface, you can use it as follows:
 ```golang
 app := new(gooh.App)
 app.Context = new(gooh.MemoryContext)
@@ -263,7 +263,7 @@ app.AddErrorHanlder(func(app *gooh.App, req *gooh.Request, res *gooh.Response, e
 ```
 
 ## Compatibility
-The `gooh.Response` implements the `http.ResponseWriter` interface and the `gooh.Request` embeds the `http.Request` struct, which is why you can use any of the `http` package functions that take an `http.ResponseWriter` and/or an `http.Request` with the `gooh.Response` and `gooh.Request` as follows:
+The `gooh.Response` embeds the `http.ResponseWriter` interface and the `gooh.Request` embeds the `http.Request` struct, which is why you can use any of the `http` package functions that take an `http.ResponseWriter` and/or an `http.Request` with the `gooh.Response` and `gooh.Request` as follows:
 ```golang
 http.NotFound(res, req.Request)
 ```
