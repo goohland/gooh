@@ -17,9 +17,14 @@ type PanicError struct {
 }
 
 func (e PanicError) Error() string {
-	s := "Panic Error"
-	if err, ok := e.Err.(error); ok {
-		return s + ": " + err.Error()
+	s := "unknown panic error"
+
+	switch v := e.Err.(type) {
+	case error:
+		s = v.Error()
+	case string:
+		s = v
 	}
+
 	return s
 }

@@ -14,11 +14,16 @@ type Route struct {
 }
 
 func (r Route) String() string {
-	return strings.Trim(r.Version.String()+" "+r.Method+" "+r.Path, " ")
+	var v string
+	if r.Version != nil {
+		v = r.Version.String()
+	}
+
+	return strings.Trim(v+" "+strings.ToUpper(r.Method)+" "+r.Path, " ")
 }
 
 func getPathFragments(p string) []string {
-	return strings.Split(strings.TrimPrefix(p, "/"), "/")
+	return strings.Split(strings.Trim(p, "/"), "/")
 }
 
 type node struct {
@@ -136,8 +141,61 @@ func (r *Router) addRouteHandler(method string, path string, v *Version, h *Rout
 	root.addRouteHandler(&path, getPathFragments(strings.Join([]string{"/", strings.ToUpper(method), path}, "")), &p, h)
 }
 
+func (r *Router) getRouteHandler(method string, path string, v *Version) (*RouteHandler, map[string]string, error) {
+	var rootKey string
+	if v != nil {
+		rootKey = v.String()
+	}
+	root := r.trees[rootKey]
+	if root == nil {
+		return nil, nil, ErrRouteNotFound
+	}
+
+	params := make(map[string]string)
+	fragments := getPathFragments("/" + method + strings.TrimSuffix(path, "/"))
+	var n *node
+	for _, f := range fragments {
+		n = root.children[f]
+
+		if n == nil {
+			n = root.children["/"]
+			if n != nil {
+				matched := len(n.pattern) == 0
+				var err error
+
+				if !matched {
+					matched, err = regexp.MatchString(n.pattern, f)
+					if err != nil {
+						return nil, nil, err
+					}
+				}
+
+				if matched {
+					params[n.param] = f
+				} else {
+					n = nil
+				}
+			}
+		}
+
+		if n != nil {
+			root = n
+		} else {
+			break
+		}
+	}
+
+	if n == nil || n.handler == nil {
+		return nil, nil, ErrRouteNotFound
+	}
+
+	return n.handler, params, nil
+}
+
 func (r *Router) AddRouteHandler(method string, path string, v Version, h RouteHandler) {
-	r.addRouteHandler(method, path, &v, &h)
+	if h != nil {
+		r.addRouteHandler(method, path, &v, &h)
+	}
 }
 
 func (r *Router) GET(path string, v Version, h RouteHandler) {
@@ -162,50 +220,11 @@ func (r *Router) HEAD(path string, v Version, h RouteHandler) {
 
 func (r *Router) GetMiddlewareHandler() MiddlewareHandler {
 	return func(app *App, req *Request, res *Response) error {
-		root := r.trees[req.ApiVersion.String()]
-		if root == nil {
-			return ErrRouteNotFound
+		if h, p, err := r.getRouteHandler(strings.ToUpper(req.Method), req.URL.Path, req.ApiVersion); err != nil {
+			return err
+		} else {
+			return (*h)(app, req, res, p)
 		}
-
-		fragments := getPathFragments("/" + req.Method + strings.TrimSuffix(req.URL.Path, "/"))
-		var n *node
-		params := make(map[string]string)
-		for _, f := range fragments {
-			n = root.children[f]
-
-			if n == nil {
-				n = root.children["/"]
-				if n != nil {
-					matched := len(n.pattern) == 0
-					var err error
-
-					if !matched {
-						matched, err = regexp.MatchString(n.pattern, f)
-						if err != nil {
-							return err
-						}
-					}
-
-					if matched {
-						params[n.param] = f
-					} else {
-						n = nil
-					}
-				}
-			}
-
-			if n != nil {
-				root = n
-			} else {
-				break
-			}
-		}
-
-		if n == nil || n.handler == nil {
-			return ErrRouteNotFound
-		}
-
-		return (*(n.handler))(app, req, res, params)
 	}
 }
 

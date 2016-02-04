@@ -104,11 +104,15 @@ func (a *App) handleError(app *App, req *Request, res *Response, err error) {
 }
 
 func (a *App) AddMiddlewareHandler(h MiddlewareHandler) {
-	a.mdwHandlers = append(a.mdwHandlers, &h)
+	if h != nil {
+		a.mdwHandlers = append(a.mdwHandlers, &h)
+	}
 }
 
 func (a *App) AddErrorHanlder(h ErrorHandler) {
-	a.errHandlers = append(a.errHandlers, &h)
+	if h != nil {
+		a.errHandlers = append(a.errHandlers, &h)
+	}
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
